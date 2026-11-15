@@ -8,8 +8,8 @@ describe("client runtime wiring", () => {
     let registered = 0;
 
     class Namespace extends Service {
-      constructor(ctx: Context) {
-        super(ctx, "remote.scuAccount");
+      constructor(ctx: Context, name: string) {
+        super(ctx, name);
       }
     }
 
@@ -18,11 +18,15 @@ describe("client runtime wiring", () => {
         super(ctx, "remote");
       }
 
-      async $mount() {
+      async $mount(contribution: { package: string }) {
+        const name =
+          contribution.package === "dsh-mingyuanhu-actions"
+            ? "remote.scuActions"
+            : "remote.scuAccount";
         const fiber = this.ctx.plugin({
-          name: "remote.scuAccount",
+          name,
           apply: (ctx: Context) => {
-            new Namespace(ctx);
+            new Namespace(ctx, name);
           },
         });
         await fiber;

@@ -54,6 +54,7 @@ describe("native account panel contribution", () => {
     await pending;
     expect(plugin.mock.calls[0]?.[0]?.inject).toEqual([
       "remote.scuAccount",
+      "remote.scuActions",
       "slots",
     ]);
     expect(register).toHaveBeenCalledOnce();
@@ -64,7 +65,7 @@ describe("native account panel contribution", () => {
     });
     for (const dispose of cleanup.reverse()) dispose();
     expect(disposeSlot).toHaveBeenCalledOnce();
-    expect(disposeLocale).toHaveBeenCalledOnce();
-    expect(disposeRemote).toHaveBeenCalledOnce();
+    expect(disposeLocale).toHaveBeenCalledTimes(2);
+    expect(disposeRemote).toHaveBeenCalledTimes(2);
   });
 });

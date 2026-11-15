@@ -73,6 +73,11 @@ export class CampusClient {
   private queue: Promise<unknown> = Promise.resolve();
   private readonly jar = new CookieJar();
   private session: Session | null = null;
+  private generation = crypto.randomUUID();
+  async actionIdentity(): Promise<string> {
+    const session = await this.identity();
+    return `${this.generation}:${session.username}:${session.loginAt}`;
+  }
   private restoreTask?: Promise<void>;
   private readonly bound = new Set<string>();
   private readonly challenges = new Map<
@@ -96,6 +101,32 @@ export class CampusClient {
     );
     this.queue = task.catch(() => undefined);
     return task;
+  }
+  transport() {
+    return {
+      writeOnce: (
+        url: string,
+        init: { method: "POST"; headers: Record<string, string>; body: string },
+      ) => this.http(url, { ...init, redirect: "error" }),
+      request: (
+        url: string,
+        init?: {
+          method?: "GET" | "POST";
+          headers?: Record<string, string>;
+          body?: string;
+          timeoutMs?: number;
+        },
+      ) => {
+        const { timeoutMs: _timeoutMs, ...request } = init ?? {};
+        return this.http(url, request);
+      },
+      bindIdentity: () => this.bindIdentity(),
+      authorizationHeaders: async (): Promise<Record<string, string>> => ({
+        Authorization: `Bearer ${(await this.identity()).token}`,
+      }),
+      academic: (path: string, init?: RequestInit) => this.academic(path, init),
+      bootstrap: (url: string) => this.bootstrap(url),
+    };
   }
   private async restore(): Promise<void> {
     this.restoreTask ??= (async () => {
@@ -181,6 +212,11 @@ export class CampusClient {
         const location = response.headers.get("location");
         if ([301, 302, 303, 307, 308].includes(response.status) && location) {
           await response.body?.cancel();
+          if (init.redirect === "error")
+            throw new CampusError(
+              "invalid_response",
+              "提交返回重定向，结果未知；请查询记录，不要自动重试",
+            );
           const next = new URL(location.replaceAll(" ", "%20"), current);
           if (next.origin !== current.origin) headers.delete("Authorization");
           if (response.status !== 307 && response.status !== 308) {
@@ -192,7 +228,14 @@ export class CampusClient {
           continue;
         }
         const reader = response.body?.getReader();
-        const decoder = new TextDecoder("utf-8");
+        const declaredCharset = /charset\s*=\s*["']?([^;\s"']+)/i
+          .exec(response.headers.get("content-type") ?? "")?.[1]
+          ?.toLowerCase();
+        const charset =
+          declaredCharset && /^(?:gbk|gb2312|gb18030)$/.test(declaredCharset)
+            ? "gb18030"
+            : "utf-8";
+        const decoder = new TextDecoder(charset);
         let text = "";
         let bytes = 0;
         if (reader) {
@@ -353,6 +396,7 @@ export class CampusClient {
   async signOut(): Promise<void> {
     await this.restore();
     this.session = null;
+    this.generation = crypto.randomUUID();
     this.jar.drop(() => true);
     this.challenges.clear();
     this.bound.clear();

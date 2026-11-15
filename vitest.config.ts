@@ -6,7 +6,7 @@ export default defineConfig({
     name: 'campus-stage3-decorators',
     enforce: 'pre',
     async transform(source, id) {
-      if (!id.replaceAll('\\', '/').endsWith('/src/host.ts')) return;
+      if (!/\/src\/(?:action-)?host\.ts$/.test(id.replaceAll('\\', '/'))) return;
       return transform(source, { loader: 'ts', format: 'esm', target: 'es2023', sourcemap: 'inline', sourcefile: id });
     },
   }],

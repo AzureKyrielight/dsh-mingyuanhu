@@ -1,9 +1,16 @@
-import { createElement } from "react";
+import { createElement, Fragment } from "react";
 import { ACCOUNT_REMOTE, type AccountRemote } from "./contracts.js";
+import { ACTION_REMOTE, type ActionRemote } from "./action-contracts.js";
 import { AccountPanel, en, zh, type Translate } from "./ui.js";
+import {
+  ActionPanel,
+  actionEn,
+  actionZh,
+  type ActionTranslate,
+} from "./action-ui.js";
 
 interface PanelContext {
-  remote: { scuAccount: AccountRemote };
+  remote: { scuAccount: AccountRemote; scuActions: ActionRemote };
   slots: {
     inject(name: string, callback: () => () => void): () => void;
     register(
@@ -18,36 +25,36 @@ interface PanelContext {
     ): () => void;
   };
 }
-
 interface ClientContext {
   remote: {
-    $mount(contribution: typeof ACCOUNT_REMOTE): Promise<() => void>;
+    $mount(
+      contribution: typeof ACCOUNT_REMOTE | typeof ACTION_REMOTE,
+    ): Promise<() => Promise<void> | void>;
   };
   locale: {
     register(
       namespace: string,
-      dictionaries: { zh: typeof zh; en: typeof en },
+      dictionaries: { zh: Record<string, string>; en: Record<string, string> },
     ): () => void;
-    bind(namespace: string): Translate;
+    bind(namespace: string): (key: string) => string;
   };
-  effect(callback: () => () => void): void;
-  plugin(plugin: {
-    inject: string[];
-    apply(ctx: PanelContext): void;
-  }): unknown;
+  plugin(plugin: { inject: string[]; apply(ctx: PanelContext): void }): unknown;
+  effect(callback: () => () => Promise<void> | void): void;
 }
-
 export const inject = ["remote", "locale"];
-
 export async function apply(ctx: ClientContext) {
-  const disposeRemote = await ctx.remote.$mount(ACCOUNT_REMOTE);
-  ctx.effect(() => () => {
-    void disposeRemote();
-  });
+  const disposeAccount = await ctx.remote.$mount(ACCOUNT_REMOTE);
+  ctx.effect(() => disposeAccount);
+  const disposeActions = await ctx.remote.$mount(ACTION_REMOTE);
+  ctx.effect(() => disposeActions);
   ctx.effect(() => ctx.locale.register("mingyuanhu", { zh, en }));
-  const t = ctx.locale.bind("mingyuanhu");
+  ctx.effect(() =>
+    ctx.locale.register("mingyuanhu-actions", { zh: actionZh, en: actionEn }),
+  );
+  const t: Translate = ctx.locale.bind("mingyuanhu");
+  const actionT: ActionTranslate = ctx.locale.bind("mingyuanhu-actions");
   ctx.plugin({
-    inject: ["remote.scuAccount", "slots"],
+    inject: ["remote.scuAccount", "remote.scuActions", "slots"],
     apply(panel) {
       panel.slots.inject("settings.section", () =>
         panel.slots.register(
@@ -59,10 +66,18 @@ export async function apply(ctx: ClientContext) {
             locale: "mingyuanhu",
           },
           () =>
-            createElement(AccountPanel, {
-              remote: panel.remote.scuAccount,
-              t,
-            }),
+            createElement(
+              Fragment,
+              null,
+              createElement(AccountPanel, {
+                remote: panel.remote.scuAccount,
+                t,
+              }),
+              createElement(ActionPanel, {
+                remote: panel.remote.scuActions,
+                t: actionT,
+              }),
+            ),
         ),
       );
     },
