@@ -45,10 +45,10 @@ export function apply(ctx: ClientContext) {
         label: () => t("title"),
         locale: "mingyuanhu",
       },
-      (props) =>
+      () =>
         createElement(AccountPanel, {
           remote: ctx.remote.scuAccount,
-          t: props.t,
+          t,
         }),
     ),
   );
