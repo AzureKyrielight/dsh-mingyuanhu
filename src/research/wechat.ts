@@ -90,6 +90,7 @@ export function parseWechatSearch(html: string): WechatHit[] {
         .slice(0, 600),
       publisher:
         (
+          box.querySelector(".all-time-y2")?.text ??
           box.querySelector("a.account")?.text ??
           box.querySelector(".s-p a")?.text ??
           ""

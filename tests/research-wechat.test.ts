@@ -29,7 +29,7 @@ const hit = (
   <div class="txt-box">
     <h3><a href="/link?url=abc&amp;type=2&amp;query=%E7%B1%B3%E5%93%88%E6%B8%B8" target="_blank">${title}</a></h3>
     <p class="txt-info">${snippet}</p>
-    <div class="s-p" t="${stamp}"><a class="account" href="/mp?x">${account}</a></div>
+    <div class="s-p" t="${stamp}"><span class="all-time-y2">${account}</span><span class="s2"><script>document.write(timeConvert('${stamp}'))</script></span></div>
   </div>
 </li>`;
 const mocks = () => ({
