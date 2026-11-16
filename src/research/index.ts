@@ -18,7 +18,7 @@ export function registerResearchTools(ctx: Context) {
     defineTool({
       name: "scu_search",
       description:
-        "定向搜索四川大学公开招聘、技术活动、升学与创新信息。多路查询合并去重，按域名分类；不查询校园个人数据，不保证年份或摘要真实性。",
+        "定向搜索四川大学公开招聘、技术活动、升学与创新信息。多路查询合并去重，按域名分类；招聘与活动类默认附带搜狗微信搜索的标题/摘要线索（正文可能被微信验证码拦截）。不查询校园个人数据，不保证年份或摘要真实性。",
       parameters: {
         category: {
           type: "string",
@@ -40,6 +40,11 @@ export function registerResearchTools(ctx: Context) {
           description: "1–4 路宿主搜索，默认4，最多并发2。",
         },
         maxResults: { type: "integer", description: "1–20 条结果，默认10。" },
+        wechat: {
+          type: "boolean",
+          description:
+            "是否附加搜狗微信搜索发现层；默认仅 recruitment/tech-events 开启。",
+        },
       },
       output,
       execute: async (args, exec) =>
